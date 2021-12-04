@@ -348,7 +348,7 @@ YOUR CODE HERE!
 ```{r part g}
 #CLEAN_plot <- ggplot(data = CLEAN, aes(x=weight, color='blue')) + geom_density(aes(fill=smoke, alpha=0.2)) + xlab("Weight in Pounds") + theme_bw()
 
-CLEAN_plot <- densityplot(~bwt, data=CLEANP,groups=smoke, main="Weights between smokers and nonsmokers", xlab="Weights in Pounds", auto.key=TRUE)
+CLEAN_plot <- densityplot(~bwt, data=CLEAN,groups=smoke, main="Weights between smokers and nonsmokers", xlab="Weights in Pounds", auto.key=TRUE)
 CLEAN_plot
 ```
 
