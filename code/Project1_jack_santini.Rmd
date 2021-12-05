@@ -1,0 +1,432 @@
+---
+title: "STAT540 - Project 1"
+author: "Jack Santini"
+output: html_notebook
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r packages, echo = FALSE, message = FALSE}
+# load the packages for graphing and data wrangling
+library(ggplot2)
+library(dplyr)
+library(lattice)
+```
+
+
+**Note:** If you `Rmd` file submission knits you will receive total of **(5 points)**
+
+
+
+### Exploratory Data Analysis Task
+
+Access the data from url http://www.stat.berkeley.edu/users/statlabs/data/babies.data and store the information in an object named BABIES using the function read.table(). A description of the variables can be found at http://www.stat.berkeley.edu/users/statlabs/labs.html. These data are a subset from a much larger study dealing with child health and development.
+
+
+Access the data on the web from URL 
+[http://www.stat.berkeley.edu/users/statlabs/data/babies.data](http://www.stat.berkeley.edu/users/statlabs/data/babies.data), and store the information in an object named `BABIES` using the function `read.table()`. 
+
+
+**The code chunk 3**: labeled `access` **does that for you**, just review it and run it!
+
+A description of the variables can be found at
+[http://www.stat.berkeley.edu/users/statlabs/labs.html](http://www.stat.berkeley.edu/users/statlabs/labs.html). 
+
+These data are a subset from a much larger study dealing with child health and development.  
+
+Use the functions `summary()`, `str()` and `dim()` on `BABIES` to find out more about the structure of the data, and report the number of rows and columns of `BABIES`. Review the type of variables.
+
+
+
+```{r access}
+site <- "http://www.stat.berkeley.edu/users/statlabs/data/babies.data"
+BABIES <- read.table(file=url(site), header=TRUE)
+b_summary <- summary(BABIES)
+b_str <- str(BABIES)
+b_dim <- dim(BABIES)
+b_summary
+b_str
+b_dim
+```
+
+> **Your sample comment:** 
+There are 1236 rows and 7 columns in `BABIES`. 
+The variables are: 'bwt', 'gestation', 'parity', 'age', 'height', 'weight', and 'smoke', and are they are all of type integer (int).
+
+
+
+#### **a-1) (5 points)** Create "clean"" data set that removes subjects if any observations on the subject are "unknown". The variables `bwt`, `gestation`, `parity`, `age`, `height`, `weight`, and `smoke` use values of 999, 999, 9, 99, 99, 999, and 9, respectively, to denote ''unknown.''  `R` uses `NA` to denote a missing or unavailable value.  Re-code the missing values in `BABIES`.  
+
+**Hint:** Use something similar to 
+
+`BABIES <- BABIES %>% mutate(bwt = ifelse(bwt == 999, NA, bwt))`, check the `ifelse` conditional element selection. The piping with %>% and using the `dplyr` package grammar of data wrangling.
+
+or alternatively you can use the `$` access to elements of data frame
+                    
+`BABIES$bwt[BABIES$bwt == 999] = NA`.  Run the functions `summary()` and `dim()` on your `BABIES` data frame.
+
+#### Solution:
+
+YOUR CODE HERE
+
+```{r part a-1}
+## example how to define the NA for bwt variable using the pipe %>% operator and mutate) from dplyr
+#BABIES <- BABIES %>% mutate(bwt = ifelse(bwt == 999, NA, bwt))
+BABIES <- BABIES %>% mutate(bwt = ifelse(bwt ==999, NA, bwt))
+BABIES <- BABIES %>% mutate(gestation = ifelse(gestation ==999, NA, gestation))
+BABIES <- BABIES %>% mutate(parity = ifelse(parity ==9, NA, parity))
+BABIES <- BABIES %>% mutate(age = ifelse(age ==99, NA, age))
+BABIES <- BABIES %>% mutate(height = ifelse(height ==99, NA, height))
+BABIES <- BABIES %>% mutate(weight = ifelse(weight ==999, NA, weight))
+BABIES <- BABIES %>% mutate(smoke = ifelse(smoke ==9, NA, smoke))
+
+b_summary <- summary(BABIES)
+b_dim <- dim(BABIES)
+b_summary
+b_dim
+
+## or alternatively via $ access
+#BABIES$bwt[BABIES$bwt == 999] = NA
+
+```
+
+
+
+
+#### **a-2) (5 points)** Use the function `na.omit()`(or the `filter()` function from `dplyr` package) to create a ''clean'' data set that removes subjects if any observations on the subject are ''unknown.'' Store the modified data frame in a data frame named `CLEAN`.  Run the function `dim()` on the data frame `CLEAN` to find the number of observations(rows) in the `CLEAN` data.  
+
+YOUR CODE HERE: 
+
+```{r part a-2}
+#1st approach: filter based on a "not a NA" logic to get all non-NAs back., filter(!is.na(variable_name))
+#2nd approach: properly reread instructions after 1st approach gave an unchanged 1236x7 DF; now by
+#CLEAN = BABIES %>% filter(bwt != 'unknown', gestation != 'unknown', parity != 'unknown', age != 'unknown', weight != 'unknown', height != 'unknown', smoke != 'unknown')
+CLEAN = BABIES %>% filter(bwt != 'unknown')
+CLEAN = CLEAN %>% filter(gestation != 'unknown')
+CLEAN = CLEAN %>% filter(parity != 'unknown')
+CLEAN = CLEAN %>% filter(age != 'unknown')
+CLEAN = CLEAN %>% filter(weight != 'unknown')
+CLEAN = CLEAN %>% filter(height != 'unknown')
+CLEAN = CLEAN %>% filter(smoke != 'unknown')
+
+clean_dim = dim(CLEAN)
+clean_dim
+```
+
+**Question/Comment:** How many missing values in the data frame `BABIES` are there for `gestation`, `age`, `height`, `weight`, and `smoke`, respectively?  How many rows of `BABIES` have no missing values, one missing value, two missing values, and three missing values, respectively?  Note: the number of rows in `CLEAN` should agree with your answer for the number of rows in `BABIES` that have no missing values.
+
+```{r comment}
+## get the number of missing values in columns, uncomment lines below to use
+colNAs<- colSums(is.na(BABIES))
+colNAs <- as.vector(colSums(is.na(BABIES))) # coerce to a vector
+
+rowNAs <- table(rowSums(is.na(BABIES)))
+rowNAs <- as.vector(table(rowSums(is.na(BABIES)))) # coerce to a vector
+colNAs
+rowNAs
+```
+
+> **Comment:** The missing values are as follows: 
+
+Comment how this align with the dimensions of your `CLEAN` data.
+
+> **Your comment:**
+The original BABIES dataframe has 1236 rows.
+The filtered CLEAN dataframe has 1174 rows, meaning there are 62 rows with at least 1 'unknown' value.
+The 5 variables with missing values and their respective amounts are: [gestation:13, age:2, weight:22, height:36, smoke:10]
+Based on thhe rowNAs vector, there are 1174 rows with 0 missing values; 43 rows with 1 missing value' 17 rows with 2 missing values' and 2 rows with 3 missing values.
+The dimensions of CLEAN are 1174 by 1236 rows. From the colNAs vector, there is a total of 83 missing values; from the rowNAs vector, we should expect less than 83 rows to be filtered between BABIES and CLEAN because there is some overlap; there are rows that have more than 1 missing value.
+
+
+
+#### **a-3) (5 points)** Sort the values in `CLEAN` by `bwt`, `gestation`, and `age`.  Store the sorted values in a data frame named `byBGA` and show the first/last six rows of `byBGA`.
+
+**Hint:** Use `arrange()` from `dplyr` or `order()` function.
+
+YOUR CODE HERE:
+
+```{r part a-3}
+## fill in the ... below to complete the code
+byBGA <- CLEAN %>% arrange(bwt, gestation, age)
+head(byBGA, 6)
+tail(byBGA, 6)
+```
+
+
+
+#### **a-4) (5 points)** Using `mutate()` from the `dplyr` package create new variable for the `CLEAN` data `bwt_gr`, the birth weight in grams, using the original variable `bwt` in ounces. Consider `1 ounce = 28.35 grams`. 
+
+YOUR CODE HERE:
+
+```{r part a-4}
+CLEAN = CLEAN %>%
+  mutate(bwt_gr = bwt * 28.35)
+CLEAN
+```
+
+
+#### **a-5) (5 points)** Let us make your data a bit **unique** for the purpose of the analysis to follow. 
+
+We will remove 100 observation at random for each student. Use the code below to do so. It uses the last two digits of your banner ID as value of the random seed, `m`. (my Banner ID ends in `19`, replace `m` with your two digit)
+
+```{r part a-5}
+m <- 81 # replace m with last two digits of your banner ID
+set.seed(m)
+# check ?sample function to see how it works
+remove <-sample(1:dim(CLEAN)[1],100) # get at random 50 numbers from 1 to the # of rows in CLEAN data
+print("Observation to remove:")
+remove
+
+# now using the slice function from the dplyr package get 50 observation removed from the CLEAN data
+CLEAN <- slice(CLEAN,-remove)
+
+```
+
+**Good practice:** Save your customized data frame `CLEAN` in your working directory as a `*.csv` file using the function `write.csv()` using the argument `row.names = FALSE`.
+
+
+```{r save}
+write.csv(CLEAN, file="CLEAN.csv", row.names=FALSE)
+```
+
+
+
+#### **part a-6 (5 points)** Use the `filter()` function to find what percent of the women in `CLEAN` are pregnant with their first child (`parity = 0`) and do not smoke? What about the percent those pregnant not for a first time and smoke.
+
+**Hint:** I have shown below how you do this with `xtabs` and `prop.table`
+
+YOUR CODE HERE!
+```{r part a-6}
+#CLEAN %>% filter(parity=0, smoke=0)
+CLEAN_table <- xtabs(~parity + smoke , data = CLEAN)
+prop.table(CLEAN_table)
+```
+
+> **Your answer here:** Approximately 44.5% of women (which is approximately 477 out of 1074 in the CLEAN dataframe) are pregnant with their first child and do not smoke.
+Approximately 10.1% of women (which is approximately 108 out of 1074 in the CLEAN dataframe) are not pregnant for the first time and do smoke.
+
+
+
+#### **part b (10 points)** Use the information in `CLEAN` to create a frequency(or density) histogram of the birth weights of babies whose mothers have never smoked (`smoke = 0`) and another histogram placed directly below the first in the same graphics device for the birth weights of babies whose mothers currently smoke (`smoke = 1`).  Make the range of the $x$-axis 800 to 5100 (ounces) for both histograms. Label the $x$-axis "Weight in Grams".  *Extra credit (5 pts), if you create the requested graph with ggplot2).*
+
+YOUR CODE HERE:
+
+```{r part b}
+#bwt_gr is bwt in grams
+smoke_plot <- CLEAN %>%
+  filter(smoke == 0) %>%
+  ggplot(aes(bwt_gr)) +
+  xlim(800, 5100) +
+  geom_density(fill = "orange") +
+  xlab("weight in grams") +
+  ggtitle("Birth weight in smoking women")
+nosmoke_plot <- CLEAN %>%
+  filter(smoke == 1) %>%
+  ggplot(aes(bwt_gr)) +
+  xlim(800, 5100) +
+  geom_density(fill = "blue") +
+  xlab("weight in grams") +
+  ggtitle("Birth Weight in nonsmoking women")
+
+smoke_plot
+nosmoke_plot
+```
+
+
+
+#### **part c (5 points)** Based on the histograms, characterize the distribution of baby birth weight for both non-smoking and smoking mothers. 
+
+YOUR CODE HERE:
+
+```{r part c}
+# Using summarise() and group_by() from dplyr
+CLEAN_nosmoke <- CLEAN %>% filter(smoke == 1)
+CLEAN_smoke <- CLEAN %>% filter(smoke ==0)
+
+CLEAN_nosmoke_grouped <- CLEAN_nosmoke %>% group_by(bwt_gr, smoke)
+CLEAN_nosmoke_group_summ <- summarize(CLEAN_nosmoke_grouped)
+
+CLEAN_smoke_grouped <- CLEAN_smoke %>% group_by(bwt_gr, smoke)
+CLEAN_smoke_group_summ <- summarize(CLEAN_smoke_grouped)
+
+CLEAN_nosmoke_grouped
+CLEAN_nosmoke_group_summ
+
+CLEAN_smoke_grouped
+CLEAN_smoke_group_summ
+
+smoke_mean_weight <- mean(CLEAN_smoke_grouped$bwt_gr)
+smoke_sd_weight <- sd(CLEAN_smoke_grouped$bwt_gr)
+smoke_var_weight <- var(CLEAN_smoke_grouped$bwt_gr)
+smoke_range_weight <- range(CLEAN_smoke_grouped$bwt_gr)
+
+nosmoke_mean_weight <- mean(CLEAN_nosmoke_grouped$bwt_gr)
+nosmoke_sd_weight <- sd(CLEAN_nosmoke_grouped$bwt_gr)
+nosmoke_var_weight <- var(CLEAN_nosmoke_grouped$bwt_gr)
+nosmoke_range_weight <- range(CLEAN_nosmoke_grouped$bwt_gr)
+
+diff_mean_weight <- smoke_mean_weight - nosmoke_mean_weight
+
+print("The mean weights of babies of smokers and nonsmokers, respectively: ")
+smoke_mean_weight
+nosmoke_mean_weight
+print("Mean weight differnce between babies of smokers versus nonsmokers: ")
+diff_mean_weight
+print("Standard deviations of babies of smokers and nonsmokers, respectively: ")
+smoke_sd_weight
+nosmoke_sd_weight
+print("Variances of babies of smokers and nonsmokers, respectively: ")
+smoke_var_weight
+nosmoke_var_weight
+print("Ranges of babies of smokers and nonsmokers, respectively: ")
+smoke_range_weight
+nosmoke_range_weight
+```
+
+
+#### **part d (5 points)** What is the mean weight difference between babies of smokers and non-smokers? Find the mean, s.d., variance, and range for `btw_gr` in both groups `nonsmoker` and `smoker`. Can you think of any reasons not to use the mean as a measure of center to compare birth weights in this problem?
+
+> **Your answer here:**
+The mean weight difference between babies of smokers and nonsmokers is 269.7173 grams.
+The mean weight of babies from smokers is: 3492.998 grams.
+The mean weight of babies born from nonsmokers is: 3223.281 grams.
+The standard deviations of weight in babies from smokers is: 489.2536 grams. 
+The standard deviations of weight in babies from nonsmokers is: 516.1856 grams.
+The variance of weight in babies from smokers is: 239369.1 grams.
+The variance of weight in babies from nonsmokers is: 266447.6 grams.
+The range of weight in babies from smokers is: 1559.25 to 4989.60 grams, or 3430.35 grams.
+The range of weight in babies from nonsmokers is: 1644.30 to 4621.05 grams, or 2976.75 grams.
+The mean may not be a good measure of center to compare birth weights in this problem. As with any situation, the mean can be affected by outliers; in this case, other factors like genetics (normal or mutations) can lead to relatively extreme birth weights regardless of the smoking status of the mother.
+
+
+#### **part e (5 points)** Create side-by-side boxplots to compare the birth weights (bwt_gr) of babies whose mother's never smoked and those who currently smoke.  Use `ggplot2` graphs to create the boxplots. Label the $y$-axis "Weight in Grams".
+
+Hint: Use template like `ggplot(data = ...., aes(...) +`
+  `geom_boxplot()`
+
+YOUR CODE HERE:
+
+```{r part e}
+#nosmoke_box <- ggplot(data = CLEAN_nosmoke, aes(x=bwt_gr)) +
+#  geom_boxplot() +
+#  ylab("Weight in grams")
+#nosmoke_box
+boxplot(CLEAN_nosmoke$bwt_gr, CLEAN_smoke$bwt_gr, col='blue', main='Birth Weights', xlab='Nonsmoker v. Smoker', ylab='weight in grams')
+```
+
+
+
+
+#### **part f (5 points)** What is the median weight difference between babies who are firstborn (`parity = 0`) and those who are not (`parity = 1`)? Use piping `%>%` and `group_by(` and `summarise()` from `dplyr` package.
+
+YOUR CODE HERE! 
+```{r part f}
+CLEAN_first <- CLEAN %>% group_by(parity==0)
+CLEAN_notfirst <- CLEAN %>% group_by(parity==1)
+CLEAN_first
+summarise(CLEAN_first, median(bwt_gr))
+summarise(CLEAN_notfirst, median(bwt_gr))
+```
+
+> **Your answer:** The median weight difference between 
+babies who are firstborn and those who are not is 42.525 grams.
+
+
+
+#### **part g (10 points)** Create a single graph of the densities for pre-pregnancy `weight` for mothers who have never smoked and for mothers who currently smoke.  Make sure both densities appear in the same graph and have a legend.  Label the $x$-axis "Weight in Pounds".  *Use the ggplot2 template for graphics below*
+
+`ggplot(data = ..., aes(x = ..., color = ...)) +`
+  `geom_density(aes(fill = ..., alpha = 0.2)) +`
+  `theme_bw()`
+
+YOUR CODE HERE! 
+```{r part g}
+#CLEAN_plot <- ggplot(data = CLEAN, aes(x=weight, color='blue')) + geom_density(aes(fill=smoke, alpha=0.2)) + xlab("Weight in Pounds") + theme_bw()
+
+CLEAN_plot <- densityplot(~bwt, data=CLEAN,groups=smoke, main="Weights between smokers and nonsmokers", xlab="Weights in Pounds", auto.key=TRUE)
+CLEAN_plot
+```
+
+
+
+#### **part j (10 points)** Compute the body mass index (`BMI`) for each mother in `CLEAN`.  Recall that `BMI` is defined as $\text{kg}/\text{m}^2$ (0.0254 m = 1 in., and 0.45359 kg = 1 lb.).  Add the variables weight in kg, height in m, and BMI to `CLEAN` and store the result in `CLEANP`.  Show the first six rows of `CLEANP`.
+ 
+YOUR CODE HERE:
+```{r part j}
+CLEANP <- CLEAN %>% mutate(weight_kg= weight*0.45359, height_m= height*0.0254, BMI= weight_kg * height_m^2)
+head(CLEANP, 6)
+```
+
+
+
+
+#### **part k (5 points)** Characterize the distribution of BMI.  Create either a histogram or density plot to
+help determine the shape of the BMI distribution.  Label the $x$-axis "BMI ($kg/m^2$)".
+
+```{r part k}
+CLEANP_nosmoke <- CLEANP %>% filter(smoke == 1)
+CLEANP_smoke <- CLEANP %>% filter(smoke == 0)
+
+#BMI_plot <- ggplot(data=CLEANP, aes(x=BMI))+
+#  geom_density(groups = smoke) +xlab("BMI (kg/m^2)")
+
+#BMI_plot <- densityplot(x, data=CLEANP, groups= smoke)
+BMI2_plot <- densityplot(~BMI, data=CLEANP, main="BMI between smokers and nonsmokers", xlab="BMI", auto.key=TRUE)
+#BMI_plot
+BMI2_plot
+```
+**Your answer:**
+The shape of the BMI distribution is skewed right.
+
+
+
+#### **part l (10 points)**  Group pregnant mothers according to their BMI quartile. Find the mean and standard deviation for baby birth weights in each quartile for mothers who have never smoked and those who currently smoke.   Find the median and IQR for baby birth weights in each quartile for mothers who have never smoked and those who currently smoke. Based on your answers, would you characterize birth weight in each group as relatively symmetric or skewed? Create histograms and densities of `bwt_gr` conditioned on `BMI` quartiles and whether the mother smokes to verify your previous assertions about the shape.
+
+YOUR CODE HERE:
+
+```{r part l-1}
+#quartile function: quantile(x, probs=seq(0, 1, 1/4))
+#CLEANP %>% quantile(
+preg_quart <- CLEANP %>% group_by(quantile(BMI, probs=seq(0, 1, 14)))
+
+```
+
+
+```{r part l-2}
+
+```
+
+```{r part l-3}
+
+```
+
+> **Your answer:**  
+
+
+
+
+#### **Extra credit (10 points)** Create side-by-side boxplots of `bwt_gr` based on whether the mother smokes conditioned on `BMI` quartiles.  What do you notice using the boxplots? Which one appears to be bigger factor, smoking or BMI?
+
+YOUR CODE HERE:
+```{r prob18}
+
+```
+
+> **Your answer:** 
+
+
+
+
+```{r, echo=FALSE}
+## DO NOT CHANGE ANYTHING IN THIS CODE CHUNK!
+date()
+sessionInfo()
+R.Version()
+```
+
+

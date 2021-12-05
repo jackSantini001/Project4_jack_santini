@@ -1,0 +1,392 @@
+---
+title: "Week 12 - Programming Exercises"
+author: "STAT 540 - Fall 2020"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r packages, warning = FALSE, message = FALSE}
+library(mdsr)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(graphics)
+library(mdsr) # install package if not installed
+library(discrim) # install package if not installed
+library(klaR) # install package if not installed
+library(kknn) # install package if not installed
+```
+
+### Motivation: Example: High-earners in the 1994 United States Census
+
+A marketing analyst might be interested in finding factors that can be used to predict whether a potential customer is a high-earner. The `1994` United States Census provides information that can inform such a model, with records from `32,561` adults that include a binary variable indicating whether each person makes greater or less than `$50,000` (more than `$80,000` today after accounting for inflation). This is our response variable. 
+
+#### A bit of data preparation 
+
+```{r prepare data}
+library(tidyverse)
+library(mdsr)
+url <-
+"http://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+
+census <- read_csv(
+  url,
+  col_names = c(
+    "age", "workclass", "fnlwgt", "education", 
+    "education_1", "marital_status", "occupation", "relationship", 
+    "race", "sex", "capital_gain", "capital_loss", "hours_per_week", 
+    "native_country", "income"
+  )
+) %>%
+  mutate(income = factor(income))
+
+# look at the structure of the data
+glimpse(census)
+```
+
+
+
+For reasons that we will discuss later, we will first separate our data set into two pieces by separating the rows at random. A sample of 80% of the rows will become the `training` data set, with the remaining 20% set aside as the `testing` (or “hold-out”) data set.
+
+```{r split data set}
+library(tidymodels)
+set.seed(364)
+n <- nrow(census)
+census_parts <- census %>%
+  initial_split(prop = 0.8)
+train <- census_parts %>% training()
+test <- census_parts %>% testing()
+pi_bar <- train %>%
+  count(income) %>%
+  mutate(pct = n / sum(n)) %>%
+  filter(income == ">50K") %>%
+  pull(pct)
+
+print(c("Percent >50K", pi_bar))
+```
+
+Note that only about 24% of those in the sample make more than `$50k`. 
+Thus, the accuracy of the *null model* is about `76%`, since we can get that many right by just predicting that everyone makes less than `$50k`.
+
+
+**Pro Tip:**	Always benchmark your predictive models against a reasonable null model.
+
+#### Let us define one model via formula object in `R`
+
+```{r model form}
+
+form <- as.formula(
+  "income ~ age + workclass + education + marital_status + 
+  occupation + relationship + race + sex + 
+  capital_gain + capital_loss + hours_per_week"
+)
+
+form
+```
+
+
+### K-Nearest Neighbors
+
+**Example** Apply `KNN` for High-earners in the 1994 United States Census data
+
+```{r}
+library(kknn)
+
+# distance metric only works with quantitative variables
+train_q <- train %>% dplyr::select(income, where(is.numeric), -fnlwgt)
+
+mod_knn <- nearest_neighbor(neighbors = 5, mode = "classification") %>%
+  set_engine("kknn", scale = TRUE) %>%
+  fit(income ~ ., data = train_q)
+
+pred <- train_q %>%
+  bind_cols(
+    predict(mod_knn, new_data = train_q, type = "class")
+  ) %>%
+  rename(income_knn = .pred_class)
+
+pred %>%
+  conf_mat(income, income_knn)
+
+
+
+```
+
+```{r}
+
+# check the accuracy - sum of diagonal element true positive and true negative divided by total 
+pred %>%
+  accuracy(income, income_knn)
+
+```
+
+
+
+
+
+* `k-NN` classifiers are widely used in part because they are easy to understand and code.
+
+* Don’t require any pre-processing time. 
+
+* Predictions can be slow, since the data must be processed at that time.
+
+* The usefulness of k-NN can depend importantly on the geometry of the data. Are the points clustered together? What is the distribution of the distances among each variable? A wider scale on one variable can dwarf a narrow scale on another variable.
+
+* An appropriate choice of `k` will depend on the application and the data. 
+
+* Cross-validation can be used to optimize the choice of `k`. 
+
+In Figure below, we show how the **misclassification rate** increases as `k` increases. 
+
+That is, if one seeks to minimize the misclassification rate on this data set, then the optimal value of `k` is `1`.
+This method of optimizing the value of the parameter `k` is a form of *cross-validation* below:
+
+```{r}
+knn_fit <- function(.data, k) {
+  nearest_neighbor(neighbors = k, mode = "classification") %>%
+    set_engine("kknn", scale = TRUE) %>%
+    fit(income ~ ., data = .data)
+}
+
+knn_accuracy <- function(mod, .new_data) {
+  mod %>%
+    predict(new_data = .new_data) %>%
+    mutate(income = .new_data$income) %>%
+    accuracy(income, .pred_class) %>%
+    pull(.estimate)
+}
+
+ks <- c(1:10, 15, 20, 30, 40, 50)
+
+# this portion is computationally intensive - comment when you knit if done repeatedly to safe time.
+knn_tune <- tibble(
+  k = ks,
+  mod = map(k, knn_fit, .data = train_q),
+  train_accuracy = map_dbl(mod, knn_accuracy, .new_data = train_q)
+)
+
+knn_tune
+
+```
+
+
+**Exercise 1** Use the built KNN `income_knn` on the `test_q` set created earlier in the notes. Compare the accuracy.
+
+Hint: Reduce the `test` set to `test_q` set with the code below, selecting only quantitative predictors:
+
+`test_q <- test %>% dplyr::select(age,education_1, capital_gain, capital_loss, hours_per_week)`
+
+
+
+**YOUR CODE HERE:**
+
+```{r}
+
+```
+
+#######################################################################################################
+
+### Naive Bayes Classifier
+
+
+**Example** Apply `na ̈ıve Bayes classifier` for High-earners in the 1994 United States Census data
+
+Consider the first person in the training data set. This is a `39`-year-old white male with a bachelor’s degree working for a state government in a clerical role. In reality, this person made less than `$50,000`.
+
+```{r}
+train %>%
+  as.data.frame() %>%
+  head(1)
+
+```
+
+
+The naıve Bayes classifier would make a prediction for this person based on the probabilities observed in the data.
+For example, in this case the probability Pr(male|>50k) of being male given that you had high income is `0.845` (**verify this using the data and data wrangling**), while the unconditional probability of being male is `P(male) = 0.670` (**Exercise: compute it using the data**. We know that the overall probability of having high income is $P(>50k) = 0.243$. Bayes’s rule tells us that the resulting probability of having high income given that one is male is:
+
+$$P(>50k|male)=\frac{P(male|>50k)P(>50k)}{P(male)}=\frac{0.845*0.243}{0.670}=0.306$$
+
+This simple example illustrates the case where we have a single explanatory variable (e.g., `sex`), but the Na ̈ıve Bayes model extends to multiple variables by making the sometimes overly simplistic assumption that the explanatory variables are **conditionally independent** (hence the name **“na ̈ıve**”).
+
+
+A na ̈ıve Bayes classifier is provided in R by the` naive_Bayes()` function from the `discrim` package. Note that like `lm()` and glm(), a `naive_Bayes()` object has a `predict()` method.
+
+
+```{r warning = FALSE}
+library(discrim)
+
+mod_nb <- naive_Bayes(mode = "classification") %>%
+  set_engine("klaR") %>%
+  fit(form, data = train)
+
+pred <- train %>%  
+  bind_cols(
+    predict(mod_nb, new_data = train, type = "class")
+  ) %>%
+  rename(income_nb = .pred_class)
+
+pred %>%
+  conf_mat(income, income_nb)
+
+
+
+accuracy(pred, income, income_nb)
+
+# or alternatively
+
+pred %>% accuracy(income, income_nb)
+
+
+```
+
+ 
+**Exercise 2** Use the built naiveBayes classfier `income_nb` on the `test` set created earlier in the notes. Compare the accuracy.
+
+
+**YOUR CODE HERE:**
+
+```{r}
+
+```
+
+############################################################################################################
+
+
+### Logistic Regression Classifier 
+
+**Example-Exercise** Model the probability of developing diabetes as a function of age and BMI. Use `NHANES` data in `mdsr`.
+
+```{r}
+library(NHANES)
+data(NHANES)
+
+# convert the diabetes status to numeric variable (1/0) (Yes/No)
+NHANES <- NHANES %>% mutate(has_diabetes = as.numeric(Diabetes == "Yes"))
+
+# create plot of has_diabetes vs age
+log_plot <- ggplot(data = NHANES, aes(x = Age, y = has_diabetes)) + 
+  geom_jitter(alpha = 0.1, height = 0.05) + 
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) + 
+  ylab("Diabetes status")
+
+log_plot + xlab("Age (in years)")
+
+log_plot + aes(x = BMI) +
+   xlab("BMI (body mass index)")
+
+
+```
+
+**Q:** Which variable is more important: `Age` or `BMI`? 
+
+We can use a logistic regression model to model the probability of diabetes as a function of both predictors.
+
+Use the `glm()` function by setting the `family = binomial` - for dichotomous outcomes
+
+```{r}
+logreg <- glm(has_diabetes ~ BMI + Age, family = "binomial", data = NHANES) 
+
+tidy(logreg)
+
+```
+
+Find the predicted probabilities:
+
+
+```{r}
+# find the predicted logit values from the model
+pred <- predict(logreg)
+
+# convert the predicted values to probabilities
+prob <- 1/(1+exp(-pred))
+
+# check some 
+prob[1:10]
+
+# use type "response" to obtain directly the probability
+prob <- predict(logreg, type = "response")
+prob[1:10]
+
+# see summary 
+summary(prob)
+```
+
+The answer is that both are important (both are statistically significant predictors). 
+To interpret the findings, we might consider a visual display of predicted probabilities as displayed in Figure below:
+
+```{r warning = FALSE}
+library(modelr)
+fake_grid <- data_grid(
+  NHANES, 
+  Age = seq_range(Age, 100),
+  BMI = seq_range(BMI, 100)
+)
+y_hats <- fake_grid %>%
+  mutate(y_hat = predict(logreg, newdata = ., type = "response"))
+head(y_hats, 1)
+
+```
+
+We see that very few young adults have diabetes, even if they have moderately high BMI scores. As we look at older subjects while holding BMI fixed, the probability of diabetes increases.
+
+
+#### Interpreting the Coefficients and Odds Ratios
+
+One advantage of logistic regression is that it produces a model that can be scored to new data rapidly, without recomputation. Another is the relative ease of interpretation of the model, as compared with other classification methods. The key conceptual idea is understanding an `odds ratio`. The odds ratio is easiest to understand for a binary factor variable `X`:
+
+$$odds ratio = \frac{Odds(Y=1|X=1)}{Odds(Y=1|X=0)}$$
+This is interpreted as the odds that `Y = 1` when `X = 1` versus the odds that `Y = 1` when `X = 0`. If the odds ratio is `2`, then the odds that `Y = 1` are two times higher when `X = 1` versus `X = 0`.
+
+Why bother with an odds ratio, instead of probabilities? We work with odds because the coefficient $\beta_i$ in the logistic regression is the log of the odds ratio for $X_i$.
+
+Odds ratios for numeric variables `X` can be interpreted: they measure the change in the odds ratio for a unit change in `X`. For example the `BMI`, the effect of increasing the `BMI`, say, from `23` to `24` increases the odds of the diabetes by a factor of `1.099`.
+
+```{r}
+# find the predicted logit values from the model
+odds_ratio_BMI <- exp(0.094325)
+odds_ratio_BMI
+```
+
+
+#### Assessing the Logit model
+
+```{r}
+# use the predict method with the logreg model, below are predicted probability
+
+logit_pred_prob <- predict(logreg, newdata = NHANES, type = "response")
+
+# assing 1/0 based on logit_pred_prob > 0.5. This is predicted diabetes status "yes". You can define different cutoff value if preferred.
+
+pred_y <- as.numeric(logit_pred_prob > 0.5)
+
+# confusion matrix
+confusion <- table(pred_y, NHANES$has_diabetes)
+
+# accuracy
+mean(pred_y == NHANES$has_diabetes, na.rm = TRUE)
+
+```
+
+Achieve 92% accuracy. 
+
+
+
+**Exercise 3** Split the original `NHANES` data into training and test sets. Allocate approximately `20%` for the test set. Fit a logistic regression model with the remaing training set. Find the accuracy of the trained model on the test set.
+
+**YOUR CODE HERE:**
+
+```{r}
+
+```
+ 
+**Exercise 4** For the same training and test sets, fit KNN and NaiveBayes classfiers. Compare their accuracy on the test set to theone of the logistic regression.
+
+**YOUR CODE HERE:**
+
+```{r}
+
+```
