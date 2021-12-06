@@ -1,0 +1,19 @@
+---
+title: "ProjectPractice"
+output: html_notebook
+---
+
+Basic library loading: 
+
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+Exercise in using basic plot/ggplot2 concepts with the "cars" dataframe, a 50x2 dataframe.
+
+```{r}
+cars
+plot(cars)
+```
+
